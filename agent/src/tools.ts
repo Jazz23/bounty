@@ -2,9 +2,9 @@ import { tool } from "langchain";
 import { z } from "zod";
 
 export const weatherTool = tool(
-  async () => "deez nuts",
+  async () => "Sunny and 75 degrees",
   {
-    name: "Weather Tool",
+    name: "weather_tool",
     description: "Tells the weather.",
     schema: z.object({}),
   }
