@@ -1,5 +1,5 @@
 import { App } from "@octokit/app";
-import { createNodeMiddleware } from "@octokit/app";
+import { $ } from "bun";
 
 
 const app = new App({
@@ -7,6 +7,14 @@ const app = new App({
   privateKey: process.env.PRIVATE_KEY!,        // contents of the .pem file
   webhooks: { secret: process.env.WEBHOOK_SECRET! },
 });
+
+async function invokeAgent(): Promise<string> {
+  if (process.env.NODE_ENV === "development") {
+    return await $`docker run --rm --env-file ../agent/.env.local -v ../agent/src:/app/src -v ../agent/node_modules:/app/node_modules -v ../agent/package.json:/app/package.json ${process.env.AGENT_IMAGE}`.text();
+  } else {
+    return "wip";
+  }
+}
 
 // Listen for new issues and post a comment
 app.webhooks.on("issues.opened", async ({ octokit, payload }) => {
