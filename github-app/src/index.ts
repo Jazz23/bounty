@@ -10,6 +10,7 @@ const app = new App({
 
 // Listen for new issues and post a comment
 app.webhooks.on("issues.opened", async ({ octokit, payload }) => {
+  console.log("issue received");
   await octokit.request(
     "POST /repos/{owner}/{repo}/issues/{issue_number}/comments",
     {

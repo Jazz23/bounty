@@ -2,8 +2,11 @@
   "name": "github-app",
   "module": "index.ts",
   "type": "module",
+  "scripts": {
+    "start": "bun run src/index.ts"
+  },
   "private": true,
-  "devDependencies": {
+    "devDependencies": {
     "@types/bun": "latest"
   },
   "peerDependencies": {

@@ -1,0 +1,5 @@
+FROM node:latest
+
+RUN npm install --global smee-client
+
+ENTRYPOINT ["sh", "-c", "smee -u $SMEE_URL -t http://host.docker.internal:3000/webhook"]
