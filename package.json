@@ -1,0 +1,5 @@
+{
+  "name": "bounty",
+  "private": true,
+  "workspaces": ["database", "website", "agent"]
+}
