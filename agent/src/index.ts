@@ -1,43 +1,30 @@
-import { createDeepAgent, FilesystemBackend } from "deepagents";
-import { weatherTool } from "./tools";
+import { handleReviewCommand } from "./pr";
 
-const agent = createDeepAgent({
-    model: "openai:gpt-5.4-mini",
-    tools: [weatherTool],
-    backend: new FilesystemBackend({
-        rootDir: "./workspace", // Will be cloned repo
-        virtualMode: true
-    })
-});
+const args = process.argv.slice(2);
 
-const result = await agent.invoke({
-    messages: [{ role: "user", content: "Run ls." }]
-});
-
-for (const msg of result.messages) {
-    const role = (msg as any)._getType?.() ?? msg.constructor?.name ?? "message";
-    console.log(`\n--- ${role} ---`);
-
-    const toolCalls = (msg as any).tool_calls;
-    if (toolCalls?.length) {
-        for (const tc of toolCalls) {
-            console.log(`[tool call] ${tc.name}(${JSON.stringify(tc.args)})`);
-        }
+let debugMode: "none" | "info" | "verbose" = "none";
+const debugIndex = args.indexOf("--debug");
+if (debugIndex !== -1) {
+    const level = args[debugIndex + 1];
+    if (level === "info" || level === "verbose") {
+        debugMode = level;
+        args.splice(debugIndex, 2);
+    } else {
+        console.error("Usage: --debug <info|verbose>");
+        process.exit(1);
     }
+}
 
-    if (msg.content) {
-        if (typeof msg.content === "string") {
-            console.log(msg.content);
-        } else if (Array.isArray(msg.content)) {
-            for (const block of msg.content as any[]) {
-                if (block.type === "thinking") {
-                    console.log(`[thinking] ${block.thinking}`);
-                } else if (block.type === "text") {
-                    console.log(block.text);
-                } else {
-                    console.log(JSON.stringify(block));
-                }
-            }
-        }
-    }
+const log = (msg: string) => { if (debugMode === "info" || debugMode === "verbose") console.error(msg); };
+
+const [command, ...rest] = args;
+
+switch (command) {
+    case "review":
+        await handleReviewCommand(rest, log, debugMode);
+        break;
+    default:
+        console.error("Usage: bun run src/index.ts <command> [options]");
+        console.error("Commands: review");
+        process.exit(1);
 }
