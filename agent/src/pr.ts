@@ -1,6 +1,22 @@
 import { createDeepAgent, FilesystemBackend } from "deepagents";
+import { tool } from "@langchain/core/tools";
+import { z } from "zod";
 import { tmpdir } from "os";
 import { join } from "path";
+
+const outputReviewTool = tool(
+    async ({ review }: { review: string }) => {
+        process.stdout.write(review + "\n");
+        process.exit(0);
+    },
+    {
+        name: "output_review",
+        description: "Output the completed PR review in markdown format to stdout and exit. You MUST call this tool exactly once when your review is complete.",
+        schema: z.object({
+            review: z.string().describe("The complete PR review in markdown format"),
+        }),
+    }
+);
 
 export async function handleReviewCommand(
     args: string[],
@@ -93,6 +109,7 @@ async function reviewPR(
 
     const agent = createDeepAgent({
         model: "openai:gpt-5.4-mini",
+        tools: [outputReviewTool],
         backend: new FilesystemBackend({
             rootDir: cloneDir,
             virtualMode: true,
@@ -103,18 +120,16 @@ async function reviewPR(
         messages: [
             {
                 role: "user",
-                content: `Review pull request #${prNumber} on ${owner}/${repo}. Head: ${headSha}, base: ${baseSha}. The PR branch "${headRef}" has been cloned into your filesystem at that exact head commit. A diff of all changes in this PR has been written to "pr.diff" at the root of the repository — start by reading that file to understand exactly what changed, then explore the relevant source files for deeper context. Identify issues and provide a thorough code review with actionable feedback. Reply in markdown syntax.`,
+                content: `Review pull request #${prNumber} on ${owner}/${repo}. Head: ${headSha}, base: ${baseSha}. The PR branch "${headRef}" has been cloned into your filesystem at that exact head commit. A diff of all changes in this PR has been written to "pr.diff" at the root of the repository — start by reading that file to understand exactly what changed, then explore the relevant source files for deeper context. Identify issues and provide a thorough code review with actionable feedback. When you are done, you MUST call the output_review tool with your complete review in markdown format.`,
             },
         ]
     };
 
     if (debugMode === "verbose") {
         for await (const chunk of await agent.stream(input, { streamMode: "values" })) {
-            console.log(chunk);
+            console.error(JSON.stringify(chunk));
         }
     } else {
-        const result = await agent.invoke(input);
-        const lastMessage = result.messages.at(-1);
-        if (lastMessage) console.log(lastMessage.content);
+        await agent.invoke(input);
     }
 }
