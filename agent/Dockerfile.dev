@@ -1,3 +1,5 @@
+# Any container created with this image is intended to have the source code mounted to prevent rebuilding the image on every code change, hence Dockerfile.dev.
+
 FROM oven/bun:1-alpine
 
 RUN apk add --no-cache git
