@@ -2,6 +2,10 @@
   "name": "@bounty/database",
   "module": "index.ts",
   "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./schema": "./src/schema/index.ts"
+  },
   "private": true,
   "scripts": {
     "db:generate": "bun --env-file=.env.local drizzle-kit generate",

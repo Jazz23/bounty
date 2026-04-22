@@ -8,6 +8,13 @@
       "when": 1776815779680,
       "tag": "0000_useful_sabra",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776817032255,
+      "tag": "0001_jazzy_stone_men",
+      "breakpoints": true
     }
   ]
 }
