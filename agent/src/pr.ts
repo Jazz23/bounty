@@ -7,16 +7,18 @@ export async function handleReviewCommand(
     log: (msg: string) => void,
     debugMode: "none" | "info" | "verbose"
 ) {
-    const [prUrl] = args;
-    if (!prUrl) {
+    if (args.length !== 1) {
         console.error("Usage: bun run src/index.ts review <github-pr-url> [--debug info|verbose]");
         process.exit(1);
     }
+    const prUrl = args[0]!;
 
     let owner: string, repo: string, prNumber: string;
     try {
         const url = new URL(prUrl);
-        if (url.hostname !== "github.com") throw new Error("hostname must be github.com");
+        if (url.hostname !== "github.com" && url.hostname !== "www.github.com") {
+            throw new Error("hostname must be github.com");
+        }
         const [ownerPart, repoPart, pullLiteral, prNumPart] = url.pathname.split("/").filter(Boolean);
         if (!ownerPart || !repoPart || pullLiteral !== "pull" || !prNumPart || !/^\d+$/.test(prNumPart)) {
             throw new Error("pathname must be /:owner/:repo/pull/:number");
@@ -53,24 +55,11 @@ async function reviewPR(
 
     const pr = (await response.json()) as any;
     const headRef = pr.head.ref as string;
-    const baseCloneUrl = pr.base.repo.clone_url as string;
+    const headSha = pr.head.sha as string;
+    const baseSha = pr.base.sha as string;
+    const headCloneUrl = pr.head.repo.clone_url as string;
 
-    const cloneDir = join(tmpdir(), `review-${owner}-${repo}-${prNumber}`);
-
-    await Bun.$`rm -rf ${cloneDir}`.quiet();
-
-    log(`Cloning ${owner}/${repo} and checking out PR #${prNumber} ("${headRef}")...`);
-    try {
-        await Bun.$`git clone --depth=1 ${baseCloneUrl} ${cloneDir}`.quiet();
-        await Bun.$`git -C ${cloneDir} fetch origin refs/pull/${prNumber}/head`.quiet();
-        await Bun.$`git -C ${cloneDir} checkout FETCH_HEAD`.quiet();
-    } catch (e) {
-        console.error(
-            `Failed to clone ${owner}/${repo} for PR #${prNumber} (${baseCloneUrl}): ${e instanceof Error ? e.message : e}`
-        );
-        process.exit(1);
-    }
-
+    // Fetch diff immediately after metadata so both reflect the same PR state
     const diffResponse = await fetch(
         `https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`,
         { headers: { Accept: "application/vnd.github.v3.diff" } }
@@ -82,6 +71,21 @@ async function reviewPR(
     }
 
     const diffContent = await diffResponse.text();
+
+    const cloneDir = join(tmpdir(), `review-${owner}-${repo}-${prNumber}`);
+
+    await Bun.$`rm -rf ${cloneDir}`.quiet();
+
+    log(`Cloning PR #${prNumber} head (${headRef} @ ${headSha.slice(0, 7)})...`);
+    try {
+        await Bun.$`git clone --depth=1 --branch ${headRef} ${headCloneUrl} ${cloneDir}`.quiet();
+    } catch (e) {
+        console.error(
+            `Failed to clone PR head (${headCloneUrl}): ${e instanceof Error ? e.message : e}`
+        );
+        process.exit(1);
+    }
+
     const diffPath = join(cloneDir, "pr.diff");
     await Bun.write(diffPath, diffContent);
 
@@ -99,7 +103,7 @@ async function reviewPR(
         messages: [
             {
                 role: "user",
-                content: `Review pull request #${prNumber} on ${owner}/${repo}. The PR branch "${headRef}" has been cloned into your filesystem. A diff of all changes in this PR has been written to "pr.diff" at the root of the repository — start by reading that file to understand exactly what changed, then explore the relevant source files for deeper context. Identify issues and provide a thorough code review with actionable feedback. Reply in markdown syntax.`,
+                content: `Review pull request #${prNumber} on ${owner}/${repo}. Head: ${headSha}, base: ${baseSha}. The PR branch "${headRef}" has been cloned into your filesystem at that exact head commit. A diff of all changes in this PR has been written to "pr.diff" at the root of the repository — start by reading that file to understand exactly what changed, then explore the relevant source files for deeper context. Identify issues and provide a thorough code review with actionable feedback. Reply in markdown syntax.`,
             },
         ]
     };
