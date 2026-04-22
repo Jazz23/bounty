@@ -120,7 +120,7 @@ async function reviewPR(
         messages: [
             {
                 role: "user",
-                content: `Review pull request #${prNumber} on ${owner}/${repo}. Head: ${headSha}, base: ${baseSha}. The PR branch "${headRef}" has been cloned into your filesystem at that exact head commit. A diff of all changes in this PR has been written to "pr.diff" at the root of the repository — start by reading that file to understand exactly what changed, then explore the relevant source files for deeper context. Identify issues and provide a thorough code review with actionable feedback. When you are done, you MUST call the output_review tool with your complete review in markdown format.`,
+                content: `Review pull request #${prNumber} on ${owner}/${repo}. Head: ${headSha}, base: ${baseSha}. The PR branch "${headRef}" has been cloned into your filesystem at that exact head commit. A diff of all changes in this PR has been written to "pr.diff" at the root of the repository — start by reading that file to understand exactly what changed, then explore the relevant source files for deeper context. Identify issues with the code found in pr.diff and provide a code review with actionable feedback. Do not mention unrelated issues not related to pr.diff. Keep the review very short, simple, and straight to the point. Do not include minor issues, only bring up major problems. When you are done, you MUST call the output_review tool with your complete review in markdown format.`,
             },
         ]
     };
